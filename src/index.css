@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+/* Global Roboto font */
+.font-roboto {
+  font-family: 'Roboto', sans-serif;
+}
+
+.font-lato {
+  font-family: 'Lato', sans-serif;
+}
+
+.font-sora {
+  font-family: 'Sora', sans-serif;
+}
+
+.font-inter {
+  font-family: 'Inter', sans-serif;
+}
