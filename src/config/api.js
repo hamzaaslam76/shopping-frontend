@@ -1,6 +1,6 @@
 // API Configuration for Customer App
 export const API_CONFIG = {
-  BASE_URL: 'https://shopping-backend-ten-pi.vercel.app',
+  BASE_URL: 'https://backend.jinns.store',
   ENDPOINTS: {
     PRODUCTS: '/api/v1/customer/products',
     PRODUCT_BY_ID: '/api/v1/customer/products',
