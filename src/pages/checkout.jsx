@@ -3,10 +3,11 @@ import Topbar from "../components/topbar";
 import Header from "../components/header";
 import Mastercard from "../assets/mastercard.png";
 import Footer from "../components/footer";
-import Regalleather from "../assets/regalleather.jpg";
 import { orderAPI, utils } from "../services/api";
+import { getImageUrl } from "../config/api";
 import { useNavigate } from "react-router-dom";
 import cartService from "../services/cartService";
+import { useToastContext } from "../contexts/ToastContext";
 
 const Checkout = () => {
   const [checkoutItems, setCheckoutItems] = useState([]);
@@ -30,6 +31,7 @@ const Checkout = () => {
     notes: ''
   });
   const navigate = useNavigate();
+  const { showOrderSuccess, showError, showValidationError } = useToastContext();
 
   useEffect(() => {
     // First check if there are items in the cart
@@ -44,20 +46,26 @@ const Checkout = () => {
         quantity: item.quantity,
         size: item.size,
         color: 'Default',
-        image: item.image || Regalleather
+        image: item.image ? getImageUrl(item.image) : getImageUrl("/uploads/products/default-product.jpg")
       }));
       setCheckoutItems(formattedCartItems);
     } else {
       // Check for single "Buy It Now" item in localStorage
       const buyNowItems = localStorage.getItem('checkoutItems');
       if (buyNowItems) {
-        setCheckoutItems(JSON.parse(buyNowItems));
+        const parsedItems = JSON.parse(buyNowItems);
+        // Ensure all items have proper image URLs
+        const formattedBuyNowItems = parsedItems.map(item => ({
+          ...item,
+          image: item.image ? getImageUrl(item.image) : getImageUrl("/uploads/products/default-product.jpg")
+        }));
+        setCheckoutItems(formattedBuyNowItems);
       } else {
         // Fallback to default items if no items found
         setCheckoutItems([
-          { productId: 1, title: "Regal Leather Starlet", price: 5499, quantity: 1, size: "39", image: Regalleather, color: 'Default' },
-          { productId: 2, title: "Regal Classic Loafers", price: 6999, quantity: 1, size: "42", image: Regalleather, color: 'Default' },
-          { productId: 3, title: "Regal Modern Sneakers", price: 4499, quantity: 1, size: "40", image: Regalleather, color: 'Default' },
+          { productId: 1, title: "Regal Leather Starlet", price: 5499, quantity: 1, size: "39", image: getImageUrl("/uploads/products/default-product.jpg"), color: 'Default' },
+          { productId: 2, title: "Regal Classic Loafers", price: 6999, quantity: 1, size: "42", image: getImageUrl("/uploads/products/default-product.jpg"), color: 'Default' },
+          { productId: 3, title: "Regal Modern Sneakers", price: 4499, quantity: 1, size: "40", image: getImageUrl("/uploads/products/default-product.jpg"), color: 'Default' },
         ]);
       }
     }
@@ -104,12 +112,12 @@ const Checkout = () => {
     e.preventDefault();
     
     if (checkoutItems.length === 0) {
-      alert('Your cart is empty. Please add some items before placing an order.');
+      showValidationError('Your cart is empty. Please add some items before placing an order.');
       return;
     }
     
     if (!orderData.customerInfo.email || !orderData.shippingAddress.firstName || !orderData.shippingAddress.address || !orderData.shippingAddress.city) {
-      alert('Please fill in all required fields (Email, First Name, Address, City)');
+      showValidationError('Please fill in all required fields (Email, First Name, Address, City)');
       return;
     }
 
@@ -139,17 +147,20 @@ const Checkout = () => {
 
       const response = await orderAPI.createGuestOrder(orderPayload);
       
+      console.log('Order API Response:', response);
+      
       // Clear both cart and checkout items after successful order
       cartService.clearCart();
       localStorage.removeItem('checkoutItems');
       
-      // Redirect to success page or show success message
-      alert(`Order placed successfully! Order Number: ${response.data.order.orderNumber}`);
-      navigate('/');
+      // Show success toast and redirect
+      const orderNumber = response.data?.order?.orderNumber || response.data?.orderNumber || 'Unknown';
+      showOrderSuccess(orderNumber);
+      setTimeout(() => navigate('/'), 2000);
       
     } catch (error) {
       console.error('Error placing order:', error);
-      alert('Failed to place order. Please try again.');
+      showError('Failed to place order. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -407,7 +418,7 @@ const Checkout = () => {
         <tr key={`${product.productId}-${product.size}`} className="border-b last:border-0">
           <td className="p-2">
             <img
-              src={product.image || Regalleather}
+              src={product.image || getImageUrl("/uploads/products/default-product.jpg")}
               alt={product.title}
               className="w-14 h-14 rounded-md object-contain bg-white"
             />
@@ -452,7 +463,7 @@ const Checkout = () => {
       >
         <div className="flex items-center space-x-3">
           <img
-            src={product.image || Regalleather}
+            src={product.image || getImageUrl("/uploads/products/default-product.jpg")}
             alt={product.title}
             className="w-20 h-20 rounded-md object-contain bg-white"
           />

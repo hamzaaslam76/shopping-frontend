@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import sneakers from "../assets/shoesHero.jpeg";
 
 const Hero = () => {
@@ -15,12 +16,12 @@ const Hero = () => {
           Fresh Styles, Premium Comfort – Grab Them <br /> Before They’re Gone.
         </p>
         <div className="mt-8 flex justify-center md:justify-start gap-6">
-          <button className="bg-pink-600 text-white px-8 py-4 rounded-lg font-medium hover:bg-pink-700 transition">
+          <Link to="/men-collections" className="bg-pink-600 text-white px-8 py-4 rounded-lg font-medium hover:bg-pink-700 transition">
             Shop Now
-          </button>
-          <button className="bg-gray-900 text-white px-8 py-4 rounded-lg font-medium hover:bg-gray-800 transition">
+          </Link>
+          <Link to="/men-collections" className="bg-gray-900 text-white px-8 py-4 rounded-lg font-medium hover:bg-gray-800 transition">
             View All
-          </button>
+          </Link>
         </div>
       </div>
 

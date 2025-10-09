@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
 import { FaHeart, FaShoppingCart, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { FiArrowUpRight } from "react-icons/fi";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { productAPI, utils } from "../services/api";
 import { getImageUrl } from "../config/api";
 import cartService from "../services/cartService";
+import { useToastContext } from "../contexts/ToastContext";
 
 // Fallback images
 import urbanImage from "../assets/urban.png";
@@ -17,11 +18,13 @@ const fallbackImages = [urbanImage, driftImage, joggersImage, blossomImage, addi
 
 const FreshPicks = () => {
   const [selectedSizes, setSelectedSizes] = useState({});
+  const [favorites, setFavorites] = useState(new Set());
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const scrollRef = useRef(null);
   const navigate = useNavigate();
+  const { showCartSuccess, showFavoriteSuccess, showValidationError } = useToastContext();
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -48,8 +51,24 @@ const FreshPicks = () => {
     fetchProducts();
   }, []);
 
-  const handleSizeClick = (productId, size) => {
+  const handleSizeClick = (e, productId, size) => {
+    e.stopPropagation(); // Prevent card click event
     setSelectedSizes({ ...selectedSizes, [productId]: size });
+  };
+
+  const handleFavoriteClick = (e, productId, productTitle) => {
+    e.stopPropagation(); // Prevent card click event
+    setFavorites(prev => {
+      const newFavorites = new Set(prev);
+      const isAdded = !newFavorites.has(productId);
+      if (newFavorites.has(productId)) {
+        newFavorites.delete(productId);
+      } else {
+        newFavorites.add(productId);
+      }
+      showFavoriteSuccess(productTitle, isAdded);
+      return newFavorites;
+    });
   };
 
   const getProductImage = (product) => {
@@ -69,7 +88,7 @@ const FreshPicks = () => {
     // Check if a size is selected
     const selectedSize = selectedSizes[product._id];
     if (!selectedSize) {
-      alert('Please select a size before adding to cart');
+      showValidationError('Please select a size before adding to cart');
       return;
     }
 
@@ -84,9 +103,7 @@ const FreshPicks = () => {
     };
 
     cartService.addToCart(cartItem);
-    
-    // Show success message (you can replace this with a toast notification)
-    alert(`${product.title} (Size: ${selectedSize}) added to cart!`);
+    showCartSuccess(product.title, 1);
   };
 
   const scroll = (direction) => {
@@ -164,7 +181,7 @@ const FreshPicks = () => {
                     return (
                       <span
                         key={size}
-                        onClick={() => handleSizeClick(item._id, size)}
+                        onClick={(e) => handleSizeClick(e, item._id, size)}
                         className={`border px-2 py-1 rounded-md text-center min-w-[24px] cursor-pointer transition
                           ${isSelected
                             ? "bg-pink-600 text-white border-pink-600"
@@ -184,8 +201,15 @@ const FreshPicks = () => {
                     <FaShoppingCart />
                     Add To Cart
                   </button>
-                  <button className="ml-2 text-gray-500 hover:text-pink-600">
-                    <FaHeart />
+                  <button 
+                    onClick={(e) => handleFavoriteClick(e, item._id, item.title)}
+                    className={`ml-2 transition-colors ${
+                      favorites.has(item._id) 
+                        ? "text-pink-600" 
+                        : "text-gray-500 hover:text-pink-600"
+                    }`}
+                  >
+                    <FaHeart className={favorites.has(item._id) ? "fill-current" : ""} />
                   </button>
                 </div>
               </div>
@@ -195,12 +219,12 @@ const FreshPicks = () => {
 
          {/* View All Button */}
         <div className="flex justify-center mt-6">
-          <button className="bg-pink-600 text-white px-8 py-3 rounded-lg font-lato font-bold hover:bg-pink-700 transition flex items-center gap-2">
+          <Link to="/men-collections" className="bg-pink-600 text-white px-8 py-3 rounded-lg font-lato font-bold hover:bg-pink-700 transition flex items-center gap-2">
             View All 
             <span className="bg-pink-600 text-white p-1 rounded">
               <FiArrowUpRight   className="text-lg" />
             </span>
-          </button>
+          </Link>
         </div>
       </div>
     </section>

@@ -3,10 +3,6 @@ import {Star,Truck,RotateCcw,CreditCard,HelpCircle,Share,Package,ChevronDown,Che
 import Topbar from "../components/topbar";
 import Header from "../components/header";
 import Breadcrumb from "../components/breadcrumb";
-import regalleather from "../assets/regalleather.jpg";
-import shoes1 from "../assets/shoes1.png";
-import shoes2 from "../assets/shoes2.png";
-import shoes3 from "../assets/shoes3.png";
 import payment from "../assets/payment.png";
 import { createIcons, icons } from "lucide";
 import Recommended from "../components/recommended";
@@ -16,7 +12,9 @@ import Footer from "../components/footer";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { productAPI, utils } from "../services/api";
 import { getImageUrl } from "../config/api";
-import cartService from "../services/cartService"; 
+import cartService from "../services/cartService";
+import { useToastContext } from "../contexts/ToastContext";
+import recentlyViewedService from "../services/recentlyViewedService"; 
 
 export default function Product() {
   const [searchParams] = useSearchParams();
@@ -33,6 +31,7 @@ export default function Product() {
   const [hover, setHover] = useState(0);
 
   const navigate = useNavigate();
+  const { showCartSuccess, showValidationError } = useToastContext();
 
   useEffect(() => {
     createIcons({ icons });
@@ -50,6 +49,11 @@ export default function Product() {
         setLoading(true);
         const response = await productAPI.getProduct(productId);
         setProduct(response.data.product);
+        
+        // Add product to recently viewed
+        if (response.data.product) {
+          recentlyViewedService.addProduct(response.data.product);
+        }
         
         // Set default size and color
         if (response.data.product.availableSizes && response.data.product.availableSizes.length > 0) {
@@ -92,7 +96,7 @@ export default function Product() {
 
   const handleAddToCart = () => {
     if (!selectedSize) {
-      alert('Please select a size before adding to cart');
+      showValidationError('Please select a size before adding to cart');
       return;
     }
 
@@ -108,32 +112,27 @@ export default function Product() {
     };
 
     cartService.addToCart(cartItem);
-    
-    // Show success message
-    alert(`${product.title} (Size: ${selectedSize}, Qty: ${quantity}) added to cart!`);
+    showCartSuccess(product.title, quantity);
   };
 
   const handleBuyNow = () => {
     if (!selectedSize) {
-      alert('Please select a size before buying now');
+      showValidationError('Please select a size before buying now');
       return;
     }
 
-    // Clear existing cart first to ensure only this product shows on checkout
-    cartService.clearCart();
-    
-    // Store single product info in localStorage for checkout
+    // Add product to cart and navigate to checkout (preserve existing cart items)
     const cartItem = {
-      productId: product._id,
+      _id: product._id,
       title: product.title,
       price: product.price,
-      quantity: quantity,
-      size: selectedSize,
-      color: selectedColor?.name || 'Default',
-      image: getProductImage()
+      oldPrice: product.oldPrice,
+      mainImages: product.mainImages,
+      selectedSize: selectedSize,
+      quantity: quantity
     };
-    
-    localStorage.setItem('checkoutItems', JSON.stringify([cartItem]));
+
+    cartService.addToCart(cartItem);
     navigate("/checkout"); 
   };
 
@@ -141,14 +140,28 @@ export default function Product() {
     if (product && product.mainImages && product.mainImages.length > 0) {
       return getImageUrl(product.mainImages[0].url);
     }
-    return regalleather;
+    return getImageUrl("/uploads/products/default-product.jpg");
   };
 
   const getThumbnails = () => {
-    if (product && product.mainImages && product.mainImages.length > 1) {
-      return product.mainImages.map(img => getImageUrl(img.url));
+    if (product && product.mainImages && product.mainImages.length > 0) {
+      // If we have server images, use them (repeat if less than 6)
+      const serverImages = product.mainImages.map(img => getImageUrl(img.url));
+      // Repeat images to fill 6 thumbnails if needed
+      while (serverImages.length < 6) {
+        serverImages.push(...serverImages);
+      }
+      return serverImages.slice(0, 6);
     }
-    return [shoes1, shoes2, shoes3, shoes1, shoes2, shoes3];
+    // Fallback: return empty array or placeholder server images
+    return [
+      getImageUrl("/uploads/products/placeholder-1.jpg"),
+      getImageUrl("/uploads/products/placeholder-2.jpg"),
+      getImageUrl("/uploads/products/placeholder-3.jpg"),
+      getImageUrl("/uploads/products/placeholder-4.jpg"),
+      getImageUrl("/uploads/products/placeholder-5.jpg"),
+      getImageUrl("/uploads/products/placeholder-6.jpg")
+    ];
   };
 
   if (loading) {

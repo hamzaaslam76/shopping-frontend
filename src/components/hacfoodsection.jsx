@@ -1,14 +1,20 @@
 import React, { useState, useEffect } from "react";
 import { FaHeart, FaShoppingCart } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 import { productAPI, utils } from "../services/api";
 import cartService from "../services/cartService";
 import urbandrift from "../assets/desighee.png";
 import { getImageUrl } from "../config/api";
+import { useToastContext } from "../contexts/ToastContext";
 
 const HacSection = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedSizes, setSelectedSizes] = useState({});
+  const [favorites, setFavorites] = useState(new Set());
+  const navigate = useNavigate();
+  const { showCartSuccess, showFavoriteSuccess, showValidationError } = useToastContext();
 
   useEffect(() => {
     const fetchHacFoodsProducts = async () => {
@@ -30,21 +36,52 @@ const HacSection = () => {
     fetchHacFoodsProducts();
   }, []);
 
-  const handleAddToCart = (product) => {
-    const selectedSize = product.availableSizes && product.availableSizes.length > 0 ? product.availableSizes[0] : 'Default';
+  const handleSizeClick = (e, productId, size) => {
+    e.stopPropagation(); // Prevent card click event
+    setSelectedSizes({ ...selectedSizes, [productId]: size });
+  };
+
+  const handleFavoriteClick = (e, productId, productTitle) => {
+    e.stopPropagation(); // Prevent card click event
+    setFavorites(prev => {
+      const newFavorites = new Set(prev);
+      const isAdded = !newFavorites.has(productId);
+      if (newFavorites.has(productId)) {
+        newFavorites.delete(productId);
+      } else {
+        newFavorites.add(productId);
+      }
+      showFavoriteSuccess(productTitle, isAdded);
+      return newFavorites;
+    });
+  };
+
+  const handleProductClick = (productId) => {
+    navigate(`/product?id=${productId}`);
+  };
+
+  const handleAddToCart = (e, product) => {
+    e.stopPropagation();
     
+    // Check if a size is selected
+    const selectedSize = selectedSizes[product._id];
+    if (!selectedSize) {
+      showValidationError('Please select a size before adding to cart');
+      return;
+    }
+
+    // Add to cart using correct format
     const cartItem = {
-      productId: product._id,
+      _id: product._id,
       title: product.title,
       price: product.price,
-      quantity: 1,
-      size: selectedSize,
-      color: 'Default',
-      image: getImageUrl(product.mainImages?.[0]?.url) || urbandrift
+      mainImages: product.mainImages,
+      selectedSize: selectedSize,
+      quantity: 1
     };
 
     cartService.addToCart(cartItem);
-    alert(`${product.title} added to cart!`);
+    showCartSuccess(product.title, 1);
   };
 
   const getProductImage = (product) => {
@@ -82,7 +119,8 @@ const HacSection = () => {
             {products.map((product) => (
               <div
                 key={product._id}
-                className="border rounded-lg p-4 shadow hover:shadow-lg transition bg-white relative"
+                className="border rounded-lg p-4 shadow hover:shadow-lg transition bg-white relative cursor-pointer"
+                onClick={() => handleProductClick(product._id)}
               >
                 {/* Discount */}
                 {product.discountPercentage && (
@@ -113,25 +151,42 @@ const HacSection = () => {
                   )}
                 </div>
 
-                {/* Available Sizes */}
-                {product.availableSizes && product.availableSizes.length > 0 && (
-                  <div className="mt-2">
-                    <p className="text-xs text-gray-600">
-                      Available: {product.availableSizes.join(', ')}
-                    </p>
-                  </div>
-                )}
+                {/* Size Selection */}
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {(product.availableSizes || ['Default']).map((size) => {
+                    const isSelected = selectedSizes[product._id] === size;
+                    return (
+                      <span
+                        key={size}
+                        onClick={(e) => handleSizeClick(e, product._id, size)}
+                        className={`border px-2 py-1 rounded-md text-center min-w-[40px] cursor-pointer transition text-xs
+                          ${isSelected
+                            ? "bg-pink-600 text-white border-pink-600"
+                            : "hover:bg-pink-100 hover:border-pink-400"}`}
+                      >
+                        {size}
+                      </span>
+                    );
+                  })}
+                </div>
 
                 {/* Buttons */}
                 <div className="flex items-center justify-between mt-4">
                   <button 
-                    onClick={() => handleAddToCart(product)}
+                    onClick={(e) => handleAddToCart(e, product)}
                     className="flex items-center justify-center gap-2 flex-1 border bg-[#444444] text-white py-2 rounded-md text-xs hover:bg-pink-600 transition"
                   >
                     <FaShoppingCart /> Add To Cart
                   </button>
-                  <button className="ml-2 text-gray-500 hover:text-pink-600 text-sm">
-                    <FaHeart />
+                  <button 
+                    onClick={(e) => handleFavoriteClick(e, product._id, product.title)}
+                    className={`ml-2 transition-colors ${
+                      favorites.has(product._id) 
+                        ? "text-pink-600" 
+                        : "text-gray-500 hover:text-pink-600"
+                    }`}
+                  >
+                    <FaHeart className={favorites.has(product._id) ? "fill-current" : ""} />
                   </button>
                 </div>
               </div>

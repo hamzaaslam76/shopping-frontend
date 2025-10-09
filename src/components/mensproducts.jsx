@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { FaHeart, FaShoppingCart, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { FiArrowUpRight } from "react-icons/fi";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { productAPI, utils } from "../services/api";
 import { getImageUrl } from "../config/api";
 import cartService from "../services/cartService";
@@ -198,12 +198,12 @@ const MensProducts = () => {
 
       {/* View All Button */}
 <div className="flex justify-center mt-6">
-  <button className="bg-black text-white px-8 py-3 rounded-lg font-lato font-bold hover:bg-black transition flex items-center gap-2">
+  <Link to="/men-collections" className="bg-black text-white px-8 py-3 rounded-lg font-lato font-bold hover:bg-black transition flex items-center gap-2">
     View All 
     <span className="bg-black text-white p-1 rounded">
       <FiArrowUpRight   className="text-lg" />
     </span>
-  </button>
+  </Link>
 </div>
       </div>
     </section>
